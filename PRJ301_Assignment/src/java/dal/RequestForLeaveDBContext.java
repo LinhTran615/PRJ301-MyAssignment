@@ -45,37 +45,33 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, eid);
             ResultSet rs = stm.executeQuery();
-            while(rs.next())
-            {
+            while (rs.next()) {
                 RequestForLeave rfl = new RequestForLeave();
-                
+
                 rfl.setCreated_time(rs.getTimestamp("created_time"));
                 rfl.setFrom(rs.getDate("from"));
                 rfl.setTo(rs.getDate("to"));
                 rfl.setReason(rs.getString("reason"));
                 rfl.setStatus(rs.getInt("status"));
-                
+
                 Employee created_by = new Employee();
                 created_by.setId(rs.getInt("created_by"));
                 created_by.setName(rs.getString("created_name"));
                 rfl.setCreated_by(created_by);
-                
+
                 int processed_by_id = rs.getInt("processed_by");
-                if(processed_by_id!=0)
-                {
+                if (processed_by_id != 0) {
                     Employee processed_by = new Employee();
                     processed_by.setId(rs.getInt("processed_by"));
                     processed_by.setName(rs.getString("processed_name"));
                     rfl.setProcessed_by(processed_by);
                 }
-                
+
                 rfls.add(rfl);
             }
         } catch (SQLException ex) {
             Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        finally
-        {
+        } finally {
             closeConnection();
         }
         return rfls;
