@@ -1,17 +1,15 @@
-<%-- 
-    Document   : message
-    Created on : Oct 6, 2025, 1:13:50 PM
-    Author     : sonnt
---%>
-
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>JSP Page</title>
-    </head>
-    <body>
-        <span id="message">${requestScope.message}</span>
-    </body>
-</html>
+<%@ page contentType="text/html;charset=UTF-8" %>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css" />
+<jsp:include page="../layout/header.jsp" />
+<div style="padding:90px 20px;">
+    <div style="max-width:620px;margin:30px auto;">
+        <div class="card" style="text-align:center">
+            <h3>Thông báo</h3>
+            <p style="color:#333">${requestScope.message}</p>
+            <div style="margin-top:12px">
+                <a class="btn" href="${pageContext.request.contextPath}/login">Quay về đăng nhập</a>
+            </div>
+        </div>
+    </div>
+</div>
+<jsp:include page="../layout/footer.jsp" />

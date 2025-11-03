@@ -21,10 +21,12 @@ public class HomeController extends BaseRequiredAuthenticationController {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+        doGet(req, resp, user);
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+        req.getRequestDispatcher("view/home.jsp").forward(req, resp);
     }
-    
+
 }

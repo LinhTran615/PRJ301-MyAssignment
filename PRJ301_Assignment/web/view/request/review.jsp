@@ -1,67 +1,42 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Duyệt đơn xin nghỉ phép</title>
-        <style>
-            body {
-                background-color: #e9f5ff;
-                font-family: sans-serif;
-                margin: 40px;
-            }
-            .form-container {
-                background-color: #dbefff;
-                padding: 20px;
-                width: 400px;
-                border-radius: 10px;
-                border: 1px solid #a0c4ff;
-            }
-            textarea {
-                width: 100%;
-                height: 100px;
-                margin-top: 10px;
-                resize: none;
-                font-size: 14px;
-            }
-            button {
-                margin-top: 15px;
-                width: 120px;
-                padding: 10px;
-                border-radius: 8px;
-                font-weight: bold;
-                border: none;
-                cursor: pointer;
-            }
-            .approve {
-                background-color: #4caf50;
-                color: white;
-            }
-            .reject {
-                background-color: #f44336;
-                color: white;
-                margin-left: 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="form-container">
-            <h3>Duyệt đơn xin nghỉ phép</h3>
-            <p>Duyệt bởi User: <b>${sessionScope.auth.displayname}</b>,
-                Role: <b>${sessionScope.auth.roles[0].name}</b></p>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css" />
+<jsp:include page="../layout/header.jsp" />
+<div class="app">
+    <jsp:include page="../layout/sidebar.jsp" />
+    <div class="main">
+        <div class="card" style="max-width:760px; margin:0 auto;">
+            <h2>Duyệt đơn xin nghỉ phép</h2>
+            <c:set var="r" value="${requestScope.rfl != null ? requestScope.rfl : requestScope.request}" />
+            <p><b>Tạo bởi:</b> ${r.created_by.name}</p>
+            <p><b>Từ → Tới:</b> ${r.from} → ${r.to}</p>
+            <p><b>Lý do:</b></p>
+            <textarea readonly rows="5" style="width:100%;border-radius:8px;border:1px solid #eef2f6;padding:10px">${r.reason}</textarea>
 
-            <p>Tạo bởi: <b>${requestLeave.created_by.name}</b></p>
-            <p>Từ ngày: <b>${requestLeave.from}</b></p>
-            <p>Tới ngày: <b>${requestLeave.to}</b></p>
-            <p>Lý do:</p>
-            <textarea readonly>${requestLeave.reason}</textarea>
+            <form method="post" action="${pageContext.request.contextPath}/request/review" style="margin-top:18px; text-align:right">
+                <input type="hidden" name="rid" value="${r.id}" />
+                <div style="display:flex; gap:12px; justify-content:flex-end">
+                    <button class="btn btn-danger" name="action" value="reject" type="button" onclick="showReject()">Từ chối</button>
+                    <button class="btn" name="action" value="approve">Phê duyệt</button>
+                </div>
 
-            <form action="review" method="POST">
-                <input type="hidden" name="rid" value="${requestLeave.id}" />
-                <button type="submit" name="action" value="approve" class="approve">Approve</button>
-                <button type="submit" name="action" value="reject" class="reject">Reject</button>
+                <div id="rejectArea" style="display:none; margin-top:12px">
+                    <label for="reject_reason">Lý do từ chối (bắt buộc)</label>
+                    <textarea id="reject_reason" name="reject_reason" rows="3" required style="width:100%;"></textarea>
+                    <div style="text-align:right; margin-top:8px">
+                        <button type="submit" class="btn btn-danger" name="action" value="reject">Xác nhận từ chối</button>
+                    </div>
+                </div>
             </form>
         </div>
-    </body>
-</html>
+
+        <jsp:include page="../layout/footer.jsp" />
+    </div>
+</div>
+
+<script>
+    function showReject() {
+        document.getElementById('rejectArea').style.display = 'block';
+        window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+    }
+</script>

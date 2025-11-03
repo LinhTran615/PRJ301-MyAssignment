@@ -14,16 +14,13 @@ public class LogoutController extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // ⚙️ Xoá toàn bộ session
+        // Xoá toàn bộ session (đăng xuất thật)
         req.getSession().invalidate();
 
-        // ⚙️ Quay về trang đăng nhập
-        resp.sendRedirect("login");
-    }
+        // Gửi thông báo đăng xuất thành công
+        req.setAttribute("message", "Bạn đã đăng xuất thành công!");
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        doGet(req, resp);
+        // Quay lại trang login (hiển thị message.jsp)
+        req.getRequestDispatcher("view/auth/message.jsp").forward(req, resp);
     }
 }
