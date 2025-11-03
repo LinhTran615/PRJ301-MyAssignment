@@ -127,6 +127,28 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return null;
     }
 
+    public int getTotalApprovedDaysByEmployee(int eid) {
+        int totalDays = 0;
+        try {
+            String sql = """
+            SELECT SUM(DATEDIFF(day, [from], [to]) + 1) AS total_days
+            FROM RequestForLeave
+            WHERE created_by = ? AND status = 1
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, eid);
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                totalDays = rs.getInt("total_days");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return totalDays;
+    }
+
     @Override
     public void insert(RequestForLeave model) {
         try {

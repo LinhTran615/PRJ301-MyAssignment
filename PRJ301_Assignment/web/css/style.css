@@ -265,3 +265,285 @@ input[type="date"], textarea, input[type="text"] {
         font-size:22px
     }
 }
+/* --- LOGIN PAGE --- */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--muted);
+    padding-top: 60px; /* chừa header fixed */
+}
+
+.login-box {
+    background: #fff;
+    padding: 40px 48px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+.login-box h2 {
+    margin-bottom: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.3px;
+}
+
+/* FORM ROWS */
+.form-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-row label {
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* INPUTS */
+.form-row input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 15px;
+    border: 1.5px solid #cfcfcf;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+
+.form-row input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.15);
+    outline: none;
+}
+
+/* BUTTON */
+.login-box .btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.25s ease, transform 0.2s ease;
+    width: 100%;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.login-box .btn:hover {
+    background: #0b6fd1;
+    transform: translateY(-1px);
+}
+/* Nút đăng nhập */
+.login-box button {
+    display: block;
+    margin: 24px auto 0 auto; /* căn giữa ngang */
+    background-color: #1a73e8;
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 8px rgba(26, 115, 232, 0.2);
+}
+
+/* Hover effect cho nút */
+.login-box button:hover {
+    background-color: #155fc0;
+    box-shadow: 0 6px 14px rgba(26, 115, 232, 0.3);
+}
+/* ---- Agenda Page ---- */
+.agenda-card {
+    max-width: 1000px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 24px 32px;
+}
+
+.agenda-card .card-title {
+    font-size: 22px;
+    color: #1a73e8;
+    margin-bottom: 16px;
+}
+
+.filter-form {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.filter-form label {
+    font-weight: 600;
+}
+
+.filter-form input[type="date"] {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.btn-primary {
+    background-color: #1a73e8;
+    color: #fff;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.25s ease;
+}
+
+.btn-primary:hover {
+    background-color: #155fc0;
+}
+
+/* ---- Styled Table ---- */
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #fdfdfd;
+}
+
+.styled-table th {
+    background-color: #1a73e8;
+    color: white;
+    padding: 12px;
+    text-align: center;
+}
+
+.styled-table td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.styled-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.off-day {
+    background-color: #ffebee;
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+.table-summary {
+    background-color: #e3f2fd;
+    font-weight: bold;
+}
+/* Layout chung */
+.dashboard {
+    display: flex;
+    height: 100vh;
+    background-color: #f8f9fb;
+}
+
+/* === SIDEBAR: White & Clean === */
+.sidebar {
+    width: 230px;
+    background-color: #ffffff; /* trắng tinh */
+    border-right: 1px solid #e0e0e0;
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar h2 {
+    text-align: center;
+    color: #1a73e8; /* xanh lam thương hiệu */
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 30px;
+}
+
+.sidebar a {
+    text-decoration: none;
+    padding: 12px 20px;
+    color: #333; /* chữ xám đậm */
+    display: block;
+    transition: all 0.25s ease;
+    font-weight: 500;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+    background-color: #e3f2fd; /* xanh nhạt khi hover */
+    color: #1a73e8;
+    border-left: 4px solid #1a73e8;
+}
+
+
+.main-content {
+    flex: 1;
+    padding: 24px 40px;
+    overflow-y: auto;
+}
+
+/* Agenda card */
+.agenda-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+.card-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1a73e8;
+    margin-bottom: 16px;
+}
+
+/* Table styling */
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.styled-table th {
+    background-color: #1a73e8;
+    color: white;
+    padding: 10px;
+}
+
+.styled-table td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.styled-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.off-day {
+    background-color: #ffebee;
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+.table-summary {
+    background-color: #e3f2fd;
+    font-weight: bold;
+}
+

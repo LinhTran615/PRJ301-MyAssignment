@@ -37,7 +37,7 @@
                 <h3>Thống kê nhanh</h3>
                 <div style="font-size:40px;color:var(--primary);margin:18px 0">●</div>
                 <div style="font-weight:700;font-size:18px">Tổng số ngày nghỉ</div>
-                <div style="font-size:28px;margin-top:8px">7</div>
+                <div style="font-size:28px;margin-top:8px">${totalDays}</div>
             </div>
         </div>
 

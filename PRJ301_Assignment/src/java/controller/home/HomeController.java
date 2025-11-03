@@ -5,6 +5,7 @@
 package controller.home;
 
 import controller.iam.BaseRequiredAuthenticationController;
+import dal.RequestForLeaveDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,9 @@ public class HomeController extends BaseRequiredAuthenticationController {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp, User user) throws ServletException, IOException {
+        RequestForLeaveDBContext rflDB = new RequestForLeaveDBContext();
+        int totalDays = rflDB.getTotalApprovedDaysByEmployee(user.getEmployee().getId());
+        req.setAttribute("totalDays", totalDays);
         req.getRequestDispatcher("view/home.jsp").forward(req, resp);
     }
 

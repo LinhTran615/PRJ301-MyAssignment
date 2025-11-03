@@ -1,112 +1,228 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
-<%@ page contentType="text/html" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Division Agenda</title>
+        <title>Division Agenda - LSM</title>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css"/>
+
         <style>
+            /* ====== RESET ====== */
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                font-family: "Segoe UI", sans-serif;
+            }
+
             body {
-                font-family: Arial, sans-serif;
+                display: flex;
+                height: 100vh;
+                background-color: #f5f7fa;
+            }
+
+            /* ====== SIDEBAR ====== */
+            .sidebar {
+                width: 240px;
+                background-color: #ffffff;
+                border-right: 1px solid #e0e0e0;
                 padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
             }
-            table {
-                border-collapse: collapse;
-                width: 100%;
-                margin-top: 20px;
-            }
-            th, td {
-                border: 1px solid #aaa;
-                padding: 8px;
+
+            .sidebar h2 {
+                color: #1e88e5;
+                font-weight: bold;
+                margin-bottom: 40px;
                 text-align: center;
             }
-            th {
-                background-color: #f4f4f4;
+
+            .nav-link {
+                display: block;
+                text-decoration: none;
+                color: #333;
+                font-size: 16px;
+                padding: 10px 15px;
+                border-radius: 8px;
+                transition: all 0.2s ease-in-out;
+                margin-bottom: 10px;
             }
-            .off {
-                background-color: #f8d7da;
-                color: #a94442;
+
+            .nav-link:hover,
+            .nav-link.active {
+                background-color: #1e88e5;
+                color: #fff;
             }
-            .work {
-                background-color: #d4edda;
-                color: #155724;
+
+            .logout-btn {
+                margin-top: 30px;
+                background-color: #e53935;
+                color: #fff;
+                text-align: center;
+                padding: 10px;
+                border-radius: 8px;
+                text-decoration: none;
+                transition: 0.2s;
             }
+
+            .logout-btn:hover {
+                background-color: #c62828;
+            }
+
+            /* ====== MAIN CONTENT ====== */
+            .main {
+                flex: 1;
+                padding: 30px;
+                overflow-y: auto;
+            }
+
             .header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                margin-bottom: 30px;
+            }
+
+            .header h1 {
+                color: #1e88e5;
+                font-size: 26px;
+            }
+
+            .filter {
+                background-color: #fff;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                display: flex;
+                align-items: center;
+                gap: 20px;
                 margin-bottom: 20px;
             }
-            .header form {
-                display: flex;
-                gap: 10px;
-                align-items: center;
+
+            .filter input[type="date"] {
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                padding: 6px 10px;
             }
-            .header h2 {
-                margin: 0;
+
+            .filter button {
+                background-color: #1e88e5;
+                color: #fff;
+                border: none;
+                padding: 8px 18px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: 0.2s;
             }
-            tfoot td {
+
+            .filter button:hover {
+                background-color: #1565c0;
+            }
+
+            /* ====== TABLE ====== */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                background: #fff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            thead {
+                background-color: #1e88e5;
+                color: white;
+            }
+
+            th, td {
+                padding: 12px 16px;
+                text-align: center;
+                border-bottom: 1px solid #eee;
+            }
+
+            tbody tr:hover {
+                background-color: #f1f9ff;
+            }
+
+            .summary {
+                margin-top: 20px;
                 font-weight: bold;
-                background-color: #eee;
+                color: #1e88e5;
             }
         </style>
     </head>
     <body>
-        <div class="header">
-            <h2>Division Agenda</h2>
-            <form method="GET" action="agenda">
-                <label for="from">From:</label>
-                <input type="date" name="from" id="from" value="${param.from}">
-                <label for="to">To:</label>
-                <input type="date" name="to" id="to" value="${param.to}">
-                <button type="submit">View</button>
-            </form>
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div>
+                <h2>LSM</h2>
+                <a href="${pageContext.request.contextPath}/request/list" class="nav-link">Leave Requests</a>
+                <a href="${pageContext.request.contextPath}/division/agenda" class="nav-link active">Division Agenda</a>
+                <a href="${pageContext.request.contextPath}/request/create" class="nav-link">Create Request</a>
+            </div>
+            <a href="${pageContext.request.contextPath}/logout" class="logout-btn">Logout</a>
         </div>
 
-        <jsp:include page="../util/greeting.jsp"></jsp:include>
+        <!-- MAIN CONTENT -->
+        <div class="main">
+            <div class="header">
+                <h1>Division Agenda</h1>
+                <div class="user-info">
+                    <strong>${sessionScope.auth.displayname}</strong> 
+                    (<span>${sessionScope.auth.employee.name}</span>)
+                </div>
+            </div>
 
-        <c:if test="${not empty dates}">
-        <table>
-            <thead>
-                <tr>
-                    <th>Employee</th>
-            <c:forEach items="${dates}" var="d">
-                <th>${d}</th>
-            </c:forEach>
-            <th>Total OFF Days</th>
-            </tr>
-            </thead>
-            <tbody>
-            <c:forEach items="${agenda}" var="row">
-                <tr>
-                    <td>${row.employee.name}</td>
-                <c:forEach items="${row.statuses}" var="s">
-                    <td class="${s eq 'OFF' ? 'off' : 'work'}">${s}</td>
-                </c:forEach>
-                <td>${row.totalOff}</td>
-                </tr>
-            </c:forEach>
-            </tbody>
+            <!-- FILTER FORM -->
+            <form class="filter" method="get" action="${pageContext.request.contextPath}/division/agenda">
+                <label>From:</label>
+                <input type="date" name="from" value="${fromDate}"/>
 
-            <!-- ✅ Dòng tổng kết toàn phòng -->
-            <tfoot>
-                <tr>
-                    <td colspan="${fn:length(dates) + 1}">Total OFF (All Employees)</td>
-                    <td>
-            <c:set var="totalSum" value="0" />
-            <c:forEach items="${agenda}" var="row">
-                <c:set var="totalSum" value="${totalSum + row.totalOff}" />
-            </c:forEach>
-            ${totalSum}
-            </td>
-            </tr>
-            </tfoot>
-        </table>
-    </c:if>
+                <label>To:</label>
+                <input type="date" name="to" value="${toDate}"/>
 
-    <c:if test="${empty dates}">
-        <p>Please select a date range to view division agenda.</p>
-    </c:if>
-</body>
+                <button type="submit">View</button>
+            </form>
+
+            <!-- TABLE -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <c:forEach items="${rfls}" var="r">
+                        <tr>
+                            <td>${r.created_by.name}</td>
+                            <td>${r.from}</td>
+                            <td>${r.to}</td>
+                            <td>${r.reason}</td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${r.status == 0}"><span style="color:#fb8c00;">Processing</span></c:when>
+                                    <c:when test="${r.status == 1}"><span style="color:#43a047;">Approved</span></c:when>
+                                    <c:when test="${r.status == 2}"><span style="color:#e53935;">Rejected</span></c:when>
+                                </c:choose>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </tbody>
+            </table>
+
+            <div class="summary">
+                Total requests: <c:out value="${fn:length(rfls)}"/>
+            </div>
+        </div>
+
+    </body>
 </html>
