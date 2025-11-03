@@ -47,7 +47,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             ResultSet rs = stm.executeQuery();
             while (rs.next()) {
                 RequestForLeave rfl = new RequestForLeave();
-
+                rfl.setId(rs.getInt("rid"));
                 rfl.setCreated_time(rs.getTimestamp("created_time"));
                 rfl.setFrom(rs.getDate("from"));
                 rfl.setTo(rs.getDate("to"));
@@ -83,8 +83,48 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
     }
 
     @Override
-    public RequestForLeave get(int id) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public RequestForLeave get(int rid) {
+        try {
+            String sql = """
+            SELECT r.rid, r.created_by, e.ename as created_name,
+                   r.created_time, r.[from], r.[to], r.reason, r.status,
+                   r.processed_by, p.ename as processed_name, r.reject_reason
+            FROM RequestForLeave r
+            INNER JOIN Employee e ON e.eid = r.created_by
+            LEFT JOIN Employee p ON p.eid = r.processed_by
+            WHERE r.rid = ?
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, rid);
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                RequestForLeave r = new RequestForLeave();
+                r.setId(rs.getInt("rid"));
+                r.setFrom(rs.getDate("from"));
+                r.setTo(rs.getDate("to"));
+                r.setReason(rs.getString("reason"));
+                r.setStatus(rs.getInt("status"));
+
+                model.Employee created = new model.Employee();
+                created.setId(rs.getInt("created_by"));
+                created.setName(rs.getString("created_name"));
+                r.setCreated_by(created);
+
+                int pid = rs.getInt("processed_by");
+                if (pid != 0) {
+                    model.Employee p = new model.Employee();
+                    p.setId(pid);
+                    p.setName(rs.getString("processed_name"));
+                    r.setProcessed_by(p);
+                }
+                return r;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return null;
     }
 
     @Override
@@ -98,6 +138,25 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             stm.setDate(3, model.getTo());
             stm.setString(4, model.getReason());
             stm.setInt(5, model.getStatus());
+            stm.executeUpdate();
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+    }
+
+    public void updateStatus(int rid, int status, int processed_by) {
+        try {
+            String sql = """
+                     UPDATE RequestForLeave
+                     SET status = ?, processed_by = ?
+                     WHERE rid = ?
+                     """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, status); // 1 = approved, 2 = rejected
+            stm.setInt(2, processed_by);
+            stm.setInt(3, rid);
             stm.executeUpdate();
         } catch (SQLException ex) {
             Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);

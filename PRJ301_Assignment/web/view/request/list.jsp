@@ -47,8 +47,8 @@
                             </c:if>
                         </c:if>
                         <c:if test="${r.processed_by eq null}">
-                            <a href="review">Approve</a>
-                            <a href="review">Reject</a>
+                            <a href="review?rid=${r.id}&action=approve">Approve</a>
+                            <a href="review?rid=${r.id}&action=reject">Reject</a>
                         </c:if>
                     </td>
                 </tr>

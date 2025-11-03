@@ -6,14 +6,12 @@ package model;
 
 import java.util.Date;
 
-
-
-
 /**
  *
  * @author sonnt
  */
 public class RequestForLeave extends BaseModel {
+
     private Employee created_by;
     private java.util.Date created_time;
     private java.sql.Date from;
@@ -21,7 +19,8 @@ public class RequestForLeave extends BaseModel {
     private String reason;
     private int status;
     private Employee processed_by;
-    
+    private String reject_reason;
+
     public Employee getCreated_by() {
         return created_by;
     }
@@ -77,5 +76,13 @@ public class RequestForLeave extends BaseModel {
     public void setProcessed_by(Employee processed_by) {
         this.processed_by = processed_by;
     }
-    
+
+    public String getReject_reason() {
+        return reject_reason;
+    }
+
+    public void setReject_reason(String reject_reason) {
+        this.reject_reason = reject_reason;
+    }
+
 }
