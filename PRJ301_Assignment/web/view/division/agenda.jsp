@@ -1,5 +1,6 @@
+<%@ page contentType="text/html; charset=UTF-8" %>
 <%
-    request.setAttribute("pageTitle", "Agenda");
-    request.setAttribute("content", "/view/division/agenda_content.jsp");
+  request.setAttribute("pageTitle", "Agenda phòng ban");
+  request.setAttribute("content", "/view/division/agenda_content.jsp");
 %>
-<jsp:forward page="../layout/layout.jsp" />
+<jsp:forward page="/view/layout/layout.jsp"/>

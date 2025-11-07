@@ -1,5 +1,6 @@
+<%@ page contentType="text/html; charset=UTF-8" %>
 <%
-    request.setAttribute("pageTitle", "Create Request");
-    request.setAttribute("content", "../request/create_content.jsp");
+  request.setAttribute("pageTitle", "Tạo đơn nghỉ phép");
+  request.setAttribute("content", "/view/request/create_content.jsp");
 %>
-<jsp:forward page="../layout/layout.jsp" />
+<jsp:forward page="/view/layout/layout.jsp"/>

@@ -1,5 +1,6 @@
+<%@ page contentType="text/html; charset=UTF-8" %>
 <%
-    request.setAttribute("pageTitle", "Review Request");
-    request.setAttribute("content", "../request/review_content.jsp");
+  request.setAttribute("pageTitle", "Duyệt đơn");
+  request.setAttribute("content", "/view/request/review_content.jsp");
 %>
-<jsp:forward page="../layout/layout.jsp" />
+<jsp:forward page="/view/layout/layout.jsp"/>
