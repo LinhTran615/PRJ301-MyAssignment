@@ -1,28 +1,37 @@
-<%@ page contentType="text/html;charset=UTF-8" %>
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/style.css" />
-<jsp:include page="../layout/header.jsp" />
+<%@ page contentType="text/html; charset=UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login | Leave Management System</title>
+  <!-- ĐƯỜNG DẪN CSS CHUẨN -->
+  <link rel="stylesheet" href="<c:url value='/css/custom.css'/>">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <h2>Login</h2>
+    <form action="<c:url value='/login'/>" method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="Enter username" required />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Enter password" required />
+      </div>
 
-<!-- Vùng chứa riêng cho trang đăng nhập -->
-<div class="login-page">
-    <div class="login-box">
-        <h2>Đăng nhập</h2>
-        <form action="${pageContext.request.contextPath}/login" method="post">
-            <div class="form-row">
-                <label for="username">Username</label>
-                <input id="username" type="text" name="username" required />
-            </div>
-            <div class="form-row">
-                <label for="password">Password</label>
-                <input id="password" type="password" name="password" required />
-            </div>
-            <button class="btn" type="submit">Đăng nhập</button>
+      <c:if test="${not empty error}">
+        <div class="alert">${error}</div>
+      </c:if>
+      <c:if test="${not empty requestScope.message}">
+        <div class="alert">${requestScope.message}</div>
+      </c:if>
 
-            <c:if test="${not empty requestScope.message}">
-                <p style="color:#e53935;margin-top:12px;text-align:center">${requestScope.message}</p>
-            </c:if>
-        </form>
-
-    </div>
-</div>
-
-<jsp:include page="../layout/footer.jsp" />
+      <button type="submit" class="btn btn-login">Login</button>
+    </form>
+    <p class="footer-text">Leave Management System © 2025</p>
+  </div>
+</body>
+</html>

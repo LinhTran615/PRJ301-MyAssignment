@@ -1,4 +1,4 @@
-package controller.request;
+package controller.division;
 
 import controller.iam.BaseRequiredAuthorizationController;
 import dal.RequestForLeaveDBContext;
@@ -6,30 +6,27 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.ArrayList;
+import model.RequestForLeave;
 import model.iam.User;
 
-@WebServlet(urlPatterns = "/request/review")
-public class ReviewController extends BaseRequiredAuthorizationController {
+@WebServlet(urlPatterns = "/division/agenda")
+public class AgendaController extends BaseRequiredAuthorizationController {
 
     @Override
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        int rid = Integer.parseInt(req.getParameter("rid"));
         RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        var r = db.get(rid);
-        req.setAttribute("request", r);
-        req.setAttribute("pageTitle", "Review Request");
-        req.setAttribute("content", "/view/request/review_content.jsp");
+        ArrayList<RequestForLeave> list = db.getByEmployeeAndSubodiaries(user.getId());
+        req.setAttribute("requests", list);
+        req.setAttribute("pageTitle", "Agenda");
+        req.setAttribute("content", "/view/division/agenda_content.jsp");
         req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
     }
 
     @Override
     protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        int rid = Integer.parseInt(req.getParameter("rid"));
-        int status = Integer.parseInt(req.getParameter("status"));
-        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        db.updateStatus(rid, status, user.getEmployee().getId());
-        resp.sendRedirect(req.getContextPath() + "/request/list");
+        processGet(req, resp, user);
     }
 }
