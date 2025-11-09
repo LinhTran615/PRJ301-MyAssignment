@@ -1,13 +1,14 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="canEditReq" value="false" />
+<c:set var="canEditRequest" value="false" />
 <c:forEach var="role" items="${sessionScope.auth.roles}">
     <c:forEach var="f" items="${role.features}">
         <c:if test="${f.url == '/request/edit'}">
-            <c:set var="canEditReq" value="true" />
+            <c:set var="canEditRequest" value="true" />
         </c:if>
     </c:forEach>
 </c:forEach>
+
 
 <h3 class="mb-3"><i class="bi bi-list-check"></i> Request List</h3>
 <!-- FILTER BAR (đồng bộ UI) -->
@@ -89,12 +90,12 @@
                         <a href="${pageContext.request.contextPath}/request/review?rid=${r.id}"
                            class="btn btn-sm btn-outline-primary">Review</a>
 
-                        <c:if test="${canEditReq 
+                        <c:if test="${canEditRequest 
                                       and r.status == 2 
                                       and r.created_by.id == sessionScope.auth.employee.id}">
-                              <a href="${pageContext.request.contextPath}/request/edit?rid=${r.id}"
-                                 class="btn btn-sm btn-outline-warning" style="margin-left:6px;">Edit &amp; Resubmit</a>
+                              <!-- Edit & Resubmit -->
                         </c:if>
+
                     </td>
 
 

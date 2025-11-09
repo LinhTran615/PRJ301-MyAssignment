@@ -1,5 +1,6 @@
 package controller.iam;
 
+import dal.RoleDBContext;
 import dal.UserDBContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -22,16 +23,30 @@ public class LoginController extends HttpServlet {
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
+        // 1) Lấy user (instance DBContext #1) - phương thức này closeConnection() trong finally
         UserDBContext db = new UserDBContext();
         User user = db.get(username, password);
 
         if (user != null) {
-            HttpSession session = req.getSession();
+            // SAU KHI user != null:
+            RoleDBContext rdb = new RoleDBContext();
+// Nạp roles (kèm features) giống như BaseRequiredAuthorizationController
+            user.setRoles(rdb.getByUserId(user.getId()));
+
+// Xóa session cũ + set session mới
+            HttpSession old = req.getSession(false);
+            if (old != null) {
+                old.invalidate();
+            }
+            HttpSession session = req.getSession(true);
             session.setAttribute("auth", user);
+
+// Redirect về Home
             resp.sendRedirect(req.getContextPath() + "/home");
         } else {
             req.setAttribute("error", "Invalid username or password!");
             req.getRequestDispatcher("view/auth/login.jsp").forward(req, resp);
         }
     }
+
 }

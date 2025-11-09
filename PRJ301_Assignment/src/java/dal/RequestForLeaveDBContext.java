@@ -462,30 +462,52 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         }
         return rfls;
     }
+// Chủ đơn sửa khi đang Processing: cập nhật nội dung (giữ status=0)
 
-    // --- NEW: cho phép người tạo đơn chỉnh sửa lý do & gửi lại sau khi bị từ chối ---
-    public boolean resubmitByOwner(int rid, int ownerEid, String newReason) {
+    public boolean updateDraftByOwner(int rid, int ownerEid, Date from, Date to, String reason) {
         try {
             String sql = """
-                UPDATE RequestForLeave
-                   SET reason = ?,
-                       status = 0,          -- back to Processing
-                       processed_by = NULL, -- clear reviewer
-                       reject_reason = NULL -- clear reject note
-                 WHERE rid = ? AND created_by = ?
-            """;
+            UPDATE RequestForLeave
+               SET [from] = ?, [to] = ?, [reason] = ?
+             WHERE rid = ? AND created_by = ? AND [status] = 0
+        """;
             PreparedStatement stm = connection.prepareStatement(sql);
-            stm.setString(1, newReason);
-            stm.setInt(2, rid);
-            stm.setInt(3, ownerEid);
-            int rows = stm.executeUpdate();
-            return rows > 0;
+            stm.setDate(1, from);
+            stm.setDate(2, to);
+            stm.setString(3, reason);
+            stm.setInt(4, rid);
+            stm.setInt(5, ownerEid);
+            return stm.executeUpdate() > 0;
         } catch (SQLException ex) {
             Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
         } finally {
             closeConnection();
         }
+        return false;
+    }
+
+    // Chủ đơn sửa khi đã Rejected: cập nhật + chuyển về Processing, xoá processed_by/reject_reason
+    public boolean resubmitByOwner(int rid, int ownerEid, Date from, Date to, String reason) {
+        try {
+            String sql = """
+            UPDATE RequestForLeave
+               SET [from] = ?, [to] = ?, [reason] = ?,
+                   [status] = 0, [processed_by] = NULL, [reject_reason] = NULL
+             WHERE rid = ? AND created_by = ? AND [status] = 2
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setDate(1, from);
+            stm.setDate(2, to);
+            stm.setString(3, reason);
+            stm.setInt(4, rid);
+            stm.setInt(5, ownerEid);
+            return stm.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return false;
     }
 
     @Override

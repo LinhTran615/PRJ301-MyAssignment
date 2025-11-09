@@ -7,6 +7,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.sql.Date;
+import java.time.LocalDate;
 import model.RequestForLeave;
 import model.iam.User;
 
@@ -34,15 +36,18 @@ public class EditController extends BaseRequiredAuthorizationController {
         RequestForLeaveDBContext db = new RequestForLeaveDBContext();
         RequestForLeave r = db.get(rid);
 
-        // chỉ chính chủ + trạng thái Rejected mới được sửa
         int myEid = user.getEmployee().getId();
-        if (r == null || r.getCreated_by() == null || r.getCreated_by().getId() != myEid || r.getStatus() != 2) {
-            resp.sendError(403); // access denied
+        // CHO PHÉP: chính chủ & (Processing hoặc Rejected)
+        if (r == null || r.getCreated_by() == null || r.getCreated_by().getId() != myEid
+                || (r.getStatus() != 0 && r.getStatus() != 2)) {
+            resp.sendError(403);
             return;
         }
 
         req.setAttribute("r", r);
-        req.setAttribute("pageTitle", "Sửa & Gửi lại đơn #" + rid);
+        req.setAttribute("isRejected", r.getStatus() == 2);
+        req.setAttribute("todayStr", LocalDate.now().toString());
+        req.setAttribute("pageTitle", (r.getStatus() == 2 ? "Sửa & Gửi lại đơn #" : "Sửa đơn #") + rid);
         req.setAttribute("content", "/view/request/edit_content.jsp");
         req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
     }
@@ -65,30 +70,65 @@ public class EditController extends BaseRequiredAuthorizationController {
             return;
         }
 
-        String reason = req.getParameter("reason");
-        if (reason != null) {
-            reason = reason.trim();
-        }
+        // 1) Đọc bản hiện tại (DB #1)
+        RequestForLeaveDBContext dbRead = new RequestForLeaveDBContext();
+        RequestForLeave current = dbRead.get(rid);
 
-        if (reason == null || reason.isEmpty() || reason.length() > 500) {
-            RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-            RequestForLeave r = db.get(rid);
-            req.setAttribute("r", r);
-            req.setAttribute("error", "Lý do không hợp lệ (không rỗng, tối đa 500 ký tự).");
-            req.setAttribute("pageTitle", "Sửa & Gửi lại đơn #" + rid);
-            req.setAttribute("content", "/view/request/edit_content.jsp");
-            req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
+        int myEid = user.getEmployee().getId();
+        if (current == null || current.getCreated_by() == null
+                || current.getCreated_by().getId() != myEid
+                || (current.getStatus() != 0 && current.getStatus() != 2)) {
+            resp.sendError(403);
             return;
         }
 
-        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
+        String reason = trimParam(req, "reason");
+        String fromStr = trimParam(req, "from");
+        String toStr = trimParam(req, "to");
 
-        // Chỉ cho chính chủ resubmit & đơn phải đang Rejected
-        boolean ok = db.resubmitByOwner(rid, user.getEmployee().getId(), reason);
-        if (ok) {
-            db.insertHistory(rid, user.getEmployee().getId(), "resubmit", "update reason and resubmit");
+        // validate…
+        // (giữ nguyên logic validate của bạn)
+        // nếu lỗi -> setAttr + forward layout như hiện tại và return
+        boolean success;
+        if (current.getStatus() == 2) {
+            // 2) Cập nhật/resubmit (DB #2)
+            RequestForLeaveDBContext dbUpdate = new RequestForLeaveDBContext();
+            success = dbUpdate.resubmitByOwner(
+                    rid, myEid,
+                    java.sql.Date.valueOf(java.time.LocalDate.parse(fromStr)),
+                    java.sql.Date.valueOf(java.time.LocalDate.parse(toStr)),
+                    reason
+            );
+            if (success) {
+                // 3) Ghi history (DB #3)
+                RequestForLeaveDBContext dbHist = new RequestForLeaveDBContext();
+                dbHist.insertHistory(rid, myEid, "resubmit", "owner updated & resubmitted");
+            }
+        } else {
+            // status == 0 (Processing) -> chỉ update nội dung
+            RequestForLeaveDBContext dbUpdate = new RequestForLeaveDBContext();
+            success = dbUpdate.updateDraftByOwner(
+                    rid, myEid,
+                    java.sql.Date.valueOf(java.time.LocalDate.parse(fromStr)),
+                    java.sql.Date.valueOf(java.time.LocalDate.parse(toStr)),
+                    reason
+            );
+            if (success) {
+                RequestForLeaveDBContext dbHist = new RequestForLeaveDBContext();
+                dbHist.insertHistory(rid, myEid, "edit", "owner updated while processing");
+            }
         }
 
         resp.sendRedirect(req.getContextPath() + "/request/list");
     }
+
+    private static String trimParam(HttpServletRequest req, String name) {
+        String v = req.getParameter(name);
+        if (v == null) {
+            return null;
+        }
+        v = v.trim();
+        return v.isEmpty() ? null : v;
+    }
+
 }

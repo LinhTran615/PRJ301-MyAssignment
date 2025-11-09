@@ -24,7 +24,9 @@ public class HomeController extends BaseRequiredAuthenticationController {
     private static boolean allow(Set<String> urls, String... targets) {
         for (String t : targets) {
             for (String have : urls) {
-                if (have == null || t == null) continue;
+                if (have == null || t == null) {
+                    continue;
+                }
                 // Cho phép linh hoạt: bằng nhau hoặc bắt đầu bằng nhau (hai chiều để hỗ trợ prefix)
                 if (t.equalsIgnoreCase(have)
                         || t.startsWith(have)
@@ -44,21 +46,27 @@ public class HomeController extends BaseRequiredAuthenticationController {
         Set<String> featureUrls = new HashSet<>();
         if (user != null && user.getRoles() != null) {
             for (Role r : user.getRoles()) {
-                if (r == null || r.getFeatures() == null) continue;
+                if (r == null || r.getFeatures() == null) {
+                    continue;
+                }
                 for (Feature f : r.getFeatures()) {
-                    if (f != null && f.getUrl() != null) featureUrls.add(f.getUrl());
+                    if (f != null && f.getUrl() != null) {
+                        featureUrls.add(f.getUrl());
+                    }
                 }
             }
         }
 
-        boolean canViewRequests   = allow(featureUrls, "/request/list", "/request");      // xem danh sách
-        boolean canCreateRequest  = allow(featureUrls, "/request/create");                // tạo đơn
-        boolean canViewAgenda     = allow(featureUrls, "/division/agenda", "/agenda");    // xem agenda
+        boolean canViewRequests = allow(featureUrls, "/request/list", "/request");      // xem danh sách
+        boolean canCreateRequest = allow(featureUrls, "/request/create");                // tạo đơn
+        boolean canViewAgenda = allow(featureUrls, "/division/agenda", "/agenda");    // xem agenda
+        boolean canEditRequest = allow(featureUrls, "/request/edit");
 
         // Đẩy cờ quyền cho JSP
         req.setAttribute("canViewRequests", canViewRequests);
         req.setAttribute("canCreateRequest", canCreateRequest);
         req.setAttribute("canViewAgenda", canViewAgenda);
+        req.setAttribute("canEditRequest", canEditRequest);
 
         // ====== 2) DỮ LIỆU KPI VÀ DANH SÁCH GẦN ĐÂY ======
         RequestForLeaveDBContext db = new RequestForLeaveDBContext();
@@ -69,7 +77,7 @@ public class HomeController extends BaseRequiredAuthenticationController {
                 .filter(r -> r.getCreated_by() != null && r.getCreated_by().getId() == myId)
                 .collect(Collectors.toList());
 
-        long myPending  = myRequests.stream().filter(r -> r.getStatus() == 0).count();
+        long myPending = myRequests.stream().filter(r -> r.getStatus() == 0).count();
         long myApproved = myRequests.stream().filter(r -> r.getStatus() == 1).count();
         long myRejected = myRequests.stream().filter(r -> r.getStatus() == 2).count();
 
