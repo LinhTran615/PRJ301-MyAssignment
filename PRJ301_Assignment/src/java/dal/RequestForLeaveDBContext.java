@@ -6,6 +6,7 @@ import java.sql.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import model.Employee;
+import model.RequestForLeaveHistory;
 
 public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
 
@@ -138,6 +139,116 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         } finally {
             closeConnection();
         }
+    }
+
+    // NEW: chèn vào RequestForLeaveDBContext (giữ nguyên insert(...) cũ)
+    public int insertReturningId(RequestForLeave model) {
+        int newId = -1;
+        try {
+            String sql = """
+            INSERT INTO [RequestForLeave] ([created_by],[created_time],[from],[to],[reason],[status],[processed_by])
+            OUTPUT INSERTED.rid
+            VALUES ( ?, GETDATE(), ?, ?, ?, 0, NULL)
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, model.getCreated_by().getId());
+            stm.setDate(2, model.getFrom());
+            stm.setDate(3, model.getTo());
+            stm.setString(4, model.getReason());
+            ResultSet rs = stm.executeQuery();
+            if (rs.next()) {
+                newId = rs.getInt(1);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return newId;
+    }
+
+    public ArrayList<RequestForLeave> findOverlaps(int createdByEid, Date from, Date to) {
+        ArrayList<RequestForLeave> res = new ArrayList<>();
+        try {
+            String sql = """
+            SELECT r.rid, r.[from], r.[to], r.[status]
+            FROM RequestForLeave r
+            WHERE r.created_by = ?
+              AND r.[to]   >= ?
+              AND r.[from] <= ?
+            ORDER BY r.rid DESC
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, createdByEid);
+            stm.setDate(2, from);
+            stm.setDate(3, to);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                RequestForLeave x = new RequestForLeave();
+                x.setId(rs.getInt("rid"));
+                x.setFrom(rs.getDate("from"));
+                x.setTo(rs.getDate("to"));
+                x.setStatus(rs.getInt("status"));
+                res.add(x);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return res;
+    }
+
+    public void insertHistory(int rid, int actedByEid, String action, String note) {
+        try {
+            String sql = """
+            INSERT INTO RequestForLeaveHistory(rid, action, note, acted_by)
+            VALUES(?,?,?,?)
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, rid);
+            stm.setString(2, action);   // 'create' | 'approve' | 'reject'
+            stm.setString(3, note);     // ví dụ 'rejected: lý do ...'
+            stm.setInt(4, actedByEid);
+            stm.executeUpdate();
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+    }
+
+    public ArrayList<RequestForLeaveHistory> listHistory(int rid) {
+        ArrayList<RequestForLeaveHistory> ls = new ArrayList<>();
+        try {
+            String sql = """
+            SELECT h.id, h.action, h.note, h.acted_time, e.eid, e.ename
+            FROM RequestForLeaveHistory h
+            JOIN Employee e ON e.eid = h.acted_by
+            WHERE h.rid = ?
+            ORDER BY h.acted_time DESC, h.id DESC
+        """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, rid);
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                RequestForLeaveHistory h = new RequestForLeaveHistory();
+                h.setId(rs.getInt("id"));
+                h.setAction(rs.getString("action"));
+                h.setNote(rs.getString("note"));
+                h.setActed_time(rs.getTimestamp("acted_time"));
+                Employee by = new Employee();
+                by.setId(rs.getInt("eid"));
+                by.setName(rs.getString("ename"));
+                h.setActed_by(by);
+                ls.add(h);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return ls;
     }
 
     public void updateStatus(int rid, int status, int processedByEid, String rejectReason) {

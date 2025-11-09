@@ -30,6 +30,7 @@ public class ReviewController extends BaseRequiredAuthorizationController {
             return;
         }
         req.setAttribute("r", r);
+        req.setAttribute("history", new RequestForLeaveDBContext().listHistory(rid));
         req.setAttribute("pageTitle", "Duyệt đơn #" + rid);
         req.setAttribute("content", "/view/request/review_content.jsp");
         req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
@@ -64,6 +65,8 @@ public class ReviewController extends BaseRequiredAuthorizationController {
 
         RequestForLeaveDBContext db = new RequestForLeaveDBContext();
         db.updateStatus(rid, newStatus, processedByEid, newStatus == 2 ? rejectReason.trim() : null);
+        String note = (newStatus == 1) ? "approved" : ("rejected: " + rejectReason.trim());
+        new RequestForLeaveDBContext().insertHistory(rid, processedByEid, (newStatus == 1 ? "approve" : "reject"), note);
         resp.sendRedirect(req.getContextPath() + "/request/list");
     }
 }

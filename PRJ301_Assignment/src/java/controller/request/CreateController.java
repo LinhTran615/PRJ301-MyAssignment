@@ -34,9 +34,9 @@ public class CreateController extends BaseRequiredAuthorizationController {
     protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
 
-        String reason  = trimOrNull(req.getParameter("reason"));
+        String reason = trimOrNull(req.getParameter("reason"));
         String fromStr = trimOrNull(req.getParameter("from"));
-        String toStr   = trimOrNull(req.getParameter("to"));
+        String toStr = trimOrNull(req.getParameter("to"));
 
         LocalDate today = LocalDate.now();
         LocalDate from = null, to = null;
@@ -49,25 +49,37 @@ public class CreateController extends BaseRequiredAuthorizationController {
         req.setAttribute("reasonVal", reason != null ? reason : "");
 
         // parse
-        try { from = LocalDate.parse(fromStr); }
-        catch (Exception e) { ok = false; req.setAttribute("err_from", "Vui lòng chọn ngày bắt đầu hợp lệ."); }
-        try { to = LocalDate.parse(toStr); }
-        catch (Exception e) { ok = false; req.setAttribute("err_to", "Vui lòng chọn ngày kết thúc hợp lệ."); }
+        try {
+            from = LocalDate.parse(fromStr);
+        } catch (Exception e) {
+            ok = false;
+            req.setAttribute("err_from", "Vui lòng chọn ngày bắt đầu hợp lệ.");
+        }
+        try {
+            to = LocalDate.parse(toStr);
+        } catch (Exception e) {
+            ok = false;
+            req.setAttribute("err_to", "Vui lòng chọn ngày kết thúc hợp lệ.");
+        }
 
         // validate nghiệp vụ
         if (ok) {
             if (from.isBefore(today)) {
-                ok = false; req.setAttribute("err_from", "Không được chọn ngày trong quá khứ.");
+                ok = false;
+                req.setAttribute("err_from", "Không được chọn ngày trong quá khứ.");
             }
             if (to.isBefore(from)) {
-                ok = false; req.setAttribute("err_to", "Ngày kết thúc phải ≥ ngày bắt đầu.");
+                ok = false;
+                req.setAttribute("err_to", "Ngày kết thúc phải ≥ ngày bắt đầu.");
             }
         }
 
         if (reason == null || reason.isEmpty()) {
-            ok = false; req.setAttribute("err_reason", "Vui lòng nhập lý do.");
+            ok = false;
+            req.setAttribute("err_reason", "Vui lòng nhập lý do.");
         } else if (reason.length() > 500) {
-            ok = false; req.setAttribute("err_reason", "Lý do quá dài (tối đa 500 ký tự).");
+            ok = false;
+            req.setAttribute("err_reason", "Lý do quá dài (tối đa 500 ký tự).");
         }
 
         if (!ok) {
@@ -77,7 +89,22 @@ public class CreateController extends BaseRequiredAuthorizationController {
             return;
         }
 
-        // Lưu DB
+        // Kiểm tra trùng khoảng ngày
+        RequestForLeaveDBContext dbCheck = new RequestForLeaveDBContext();
+        var conflicts = dbCheck.findOverlaps(
+                user.getEmployee().getId(),
+                Date.valueOf(from),
+                Date.valueOf(to)
+        );
+        if (!conflicts.isEmpty()) {
+            req.setAttribute("conflicts", conflicts);
+            req.setAttribute("pageTitle", "Tạo đơn nghỉ phép");
+            req.setAttribute("content", "/view/request/create_content.jsp");
+            req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
+            return;
+        }
+
+// Tạo mới
         RequestForLeave r = new RequestForLeave();
         Employee e = new Employee();
         e.setId(user.getEmployee().getId());
@@ -85,15 +112,26 @@ public class CreateController extends BaseRequiredAuthorizationController {
         r.setFrom(Date.valueOf(from));
         r.setTo(Date.valueOf(to));
         r.setReason(reason);
-        r.setStatus(0); // Processing
+        r.setStatus(0);
 
-        new RequestForLeaveDBContext().insert(r);
-
+        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
+        int newRid = db.insertReturningId(r);
+        if (newRid > 0) {
+            new RequestForLeaveDBContext().insertHistory(
+                    newRid,
+                    user.getEmployee().getId(),
+                    "create",
+                    "create request"
+            );
+        }
         resp.sendRedirect(req.getContextPath() + "/request/list");
+
     }
 
-    private static String trimOrNull(String s){
-        if (s == null) return null;
+    private static String trimOrNull(String s) {
+        if (s == null) {
+            return null;
+        }
         s = s.trim();
         return s.isEmpty() ? null : s;
     }

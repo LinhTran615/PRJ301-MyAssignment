@@ -82,6 +82,31 @@
         </div>
     </div>
 </c:if>
+<c:if test="${not empty history}">
+    <div class="panel" style="margin-top:14px;">
+        <div class="panel-head">Lịch sử xử lý</div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Người thực hiện</th>
+                    <th>Hành động</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody>
+                <c:forEach var="h" items="${history}">
+                    <tr>
+                        <td>${h.acted_time}</td>
+                        <td>${h.acted_by.name}</td>
+                        <td>${h.action}</td>
+                        <td>${h.note}</td>
+                    </tr>
+                </c:forEach>
+            </tbody>
+        </table>
+    </div>
+</c:if>
 
 <style>
     .grid-2{
