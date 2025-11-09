@@ -153,11 +153,12 @@
                     <th>Nhân viên</th>
                         <c:forEach var="d" items="${days}">
                         <th>
-                <fmt:formatDate value="${d}" pattern="dd/MM"/>
-                <span class="date-sub"><fmt:formatDate value="${d}" pattern="EEE"/></span>
-                </th>
-            </c:forEach>
-            </tr>
+                            <fmt:formatDate value="${d}" pattern="dd/MM"/>
+                            <span class="date-sub"><fmt:formatDate value="${d}" pattern="EEE"/></span>
+                        </th>
+                    </c:forEach>
+                    <th>Tổng nghỉ</th>
+                </tr>
             </thead>
             <tbody>
                 <c:forEach var="row" items="${rows}">
@@ -167,7 +168,7 @@
                             <td>
                                 <c:choose>
                                     <c:when test="${v == 1}">
-                                        <div class="cell cell-off" title="Nghỉ"></div>
+                                        <div class="cell cell-off" title="Nghỉ (Approved)"></div>
                                     </c:when>
                                     <c:when test="${v == 2}">
                                         <div class="cell cell-proc" title="Đơn chờ duyệt"></div>
@@ -178,12 +179,15 @@
                                 </c:choose>
                             </td>
                         </c:forEach>
+                        <!-- Ô tổng nghỉ -->
+                        <td style="font-weight:700; text-align:center;">${row.total}</td>
                     </tr>
                 </c:forEach>
 
                 <c:if test="${empty rows}">
                     <tr>
-                        <td colspan="${fn:length(days) + 1}" style="text-align:center; color:#64748b; padding:18px;">
+                        <!-- 1 (cột tên) + số ngày + 1 (cột tổng) -->
+                        <td colspan="${fn:length(days) + 2}" style="text-align:center; color:#64748b; padding:18px;">
                             Không có nhân sự phù hợp bộ lọc.
                         </td>
                     </tr>

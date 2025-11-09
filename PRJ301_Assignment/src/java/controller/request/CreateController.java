@@ -68,9 +68,9 @@ public class CreateController extends BaseRequiredAuthorizationController {
                 ok = false;
                 req.setAttribute("err_from", "Không được chọn ngày trong quá khứ.");
             }
-            if (to.isBefore(from)) {
+            if (!to.isAfter(from)) {
                 ok = false;
-                req.setAttribute("err_to", "Ngày kết thúc phải ≥ ngày bắt đầu.");
+                req.setAttribute("err_to", "‘Đến ngày’ phải sau ‘Từ ngày’ ít nhất 1 ngày.");
             }
         }
 

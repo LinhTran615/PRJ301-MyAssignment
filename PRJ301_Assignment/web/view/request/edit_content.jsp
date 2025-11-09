@@ -136,14 +136,25 @@
     (function () {
         const from = document.getElementById('from');
         const to = document.getElementById('to');
+
+        function iso(d) {
+            return d.toISOString().slice(0, 10);
+        }
+        function plus1(dateStr) {
+            const d = new Date(dateStr);
+            d.setDate(d.getDate() + 1);
+            return iso(d);
+        }
         function sync() {
-            if (from.value) {
-                to.min = from.value;
-                if (to.value && to.value < from.value)
-                    to.value = from.value;
-            }
+            if (!from.value)
+                return;
+            const minTo = plus1(from.value);
+            to.min = minTo;
+            if (to.value && to.value < minTo)
+                to.value = minTo;
         }
         from.addEventListener('change', sync);
-        sync();
+        sync(); // init
     })();
 </script>
+

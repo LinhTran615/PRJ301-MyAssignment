@@ -26,7 +26,7 @@
         </div>
         <div class="form-group">
             <div id="dayCounter" class="help">
-                Số ngày làm việc (trừ T7, CN): <strong id="workdays">0</strong>
+                Số ngày nghỉ phép (trừ T7, CN): <strong id="workdays">0</strong>
             </div>
 
             <c:if test="${not empty conflicts}">
@@ -132,31 +132,44 @@
 </style>
 
 <script>
-    // Đồng bộ: 'to' luôn >= 'from' + min = hôm nay
+    // Đồng bộ: 'to' luôn > 'from' (ít nhất +1 day) và >= hôm nay
     (function () {
         const from = document.getElementById('from');
         const to = document.getElementById('to');
+        const out = document.getElementById('workdays');
+        const fromI = from, toI = to;
+
+        function iso(d) {
+            return d.toISOString().slice(0, 10);
+        }
+        function plus1(dateStr) {
+            const d = new Date(dateStr);
+            d.setDate(d.getDate() + 1);
+            return iso(d);
+        }
 
         function syncToMin() {
-            if (from.value) {
-                to.min = from.value;
-                if (to.value && to.value < from.value)
-                    to.value = from.value;
-            }
+            if (!from.value)
+                return;
+            // min của 'to' = from + 1 day
+            const minTo = plus1(from.value);
+            to.min = minTo;
+            if (to.value && to.value < minTo)
+                to.value = minTo;
         }
-        from.addEventListener('change', syncToMin);
-        // chạy lúc đầu để chỉnh min của 'to'
-        syncToMin();
-        // Đếm số ngày làm việc (trừ T7, CN)
-        const fromI = document.getElementById('from');
-        const toI = document.getElementById('to');
-        const out = document.getElementById('workdays');
 
-        function businessDays(from, to) {
-            if (!from || !to)
+        from.addEventListener('change', () => {
+            syncToMin();
+            recalc();
+        });
+        to.addEventListener('change', recalc);
+
+        // Đếm số ngày làm việc (T2–T6, inclusive)
+        function businessDays(fromStr, toStr) {
+            if (!fromStr || !toStr)
                 return 0;
-            const a = new Date(from), b = new Date(to);
-            if (b < a)
+            const a = new Date(fromStr), b = new Date(toStr);
+            if (b <= a)
                 return 0;
             let days = 0;
             for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) {
@@ -169,9 +182,10 @@
         function recalc() {
             out.textContent = businessDays(fromI.value, toI.value);
         }
-        fromI.addEventListener('change', recalc);
-        toI.addEventListener('change', recalc);
-        recalc();
 
+        // khởi tạo
+        syncToMin();
+        recalc();
     })();
 </script>
+
