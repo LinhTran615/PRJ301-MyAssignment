@@ -26,7 +26,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
                      , r.[to]
                      , r.[reason]
                      , r.[status]
-                     , r.[processed_by]
+                     , r.[processed_by], r.[reject_reason]
                      , p.ename as [processed_name]
                 FROM Org e 
                 INNER JOIN [RequestForLeave] r ON e.eid = r.created_by
@@ -44,7 +44,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
                 rfl.setTo(rs.getDate("to"));
                 rfl.setReason(rs.getString("reason"));
                 rfl.setStatus(rs.getInt("status"));
-
+                rfl.setReject_reason(rs.getString("reject_reason"));
                 Employee created_by = new Employee();
                 created_by.setId(rs.getInt("created_by"));
                 created_by.setName(rs.getString("created_name"));
@@ -80,6 +80,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
                      , r.[reason]
                      , r.[status]
                      , r.[processed_by]
+                         ,r.reject_reason
                      , p.ename as [processed_name]
                 FROM [RequestForLeave] r
                 INNER JOIN Employee e ON e.eid = r.created_by
@@ -96,7 +97,7 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
                 rfl.setTo(rs.getDate("to"));
                 rfl.setReason(rs.getString("reason"));
                 rfl.setStatus(rs.getInt("status"));
-
+                rfl.setReject_reason(rs.getString("reject_reason"));
                 Employee created_by = new Employee();
                 created_by.setId(rs.getInt("created_by"));
                 created_by.setName(rs.getString("created_name"));
@@ -139,22 +140,116 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         }
     }
 
-    public void updateStatus(int rid, int status, int processedByEid) {
+    public void updateStatus(int rid, int status, int processedByEid, String rejectReason) {
         try {
             String sql = """
                 UPDATE [RequestForLeave]
-                SET [status] = ?, [processed_by] = ?
+                SET [status] = ?, [processed_by] = ?, [reject_reason] = ?
                 WHERE [rid] = ?""";
             PreparedStatement stm = connection.prepareStatement(sql);
             stm.setInt(1, status);
             stm.setInt(2, processedByEid);
-            stm.setInt(3, rid);
+            if (rejectReason == null || rejectReason.isBlank()) {
+                stm.setNull(3, Types.VARCHAR);
+            } else {
+                stm.setString(3, rejectReason);
+            }
+            stm.setInt(4, rid);
             stm.executeUpdate();
         } catch (SQLException ex) {
             Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             closeConnection();
         }
+    }
+
+    public ArrayList<RequestForLeave> getAgendaForManager(int managerEid, java.sql.Date from, java.sql.Date to, String nameLike) {
+        ArrayList<RequestForLeave> rfls = new ArrayList<>();
+        try {
+            StringBuilder sql = new StringBuilder("""
+            WITH Org AS (
+                SELECT *, 0 as lvl FROM Employee e WHERE e.eid = ?
+                UNION ALL
+                SELECT c.*, o.lvl + 1 as lvl FROM Employee c JOIN Org o ON c.supervisorid = o.eid
+            )
+            SELECT r.[rid]
+                 , r.[created_by]
+                 , e.ename as [created_name]
+                 , r.[created_time]
+                 , r.[from]
+                 , r.[to]
+                 , r.[reason]
+                 , r.[status]
+                 , r.[processed_by]
+                 , p.ename as [processed_name]
+            FROM Org e
+            INNER JOIN [RequestForLeave] r ON e.eid = r.created_by
+            LEFT JOIN Employee p ON p.eid = r.processed_by
+            WHERE 1=1
+        """);
+
+            ArrayList<Object> params = new ArrayList<>();
+            params.add(managerEid);
+
+            // Lọc theo overlap ngày: r.to >= from && r.from <= to
+            if (from != null) {
+                sql.append(" AND r.[to] >= ?");
+                params.add(from);
+            }
+            if (to != null) {
+                sql.append(" AND r.[from] <= ?");
+                params.add(to);
+            }
+
+            // Lọc theo tên nhân sự
+            if (nameLike != null && !nameLike.trim().isEmpty()) {
+                sql.append(" AND e.ename LIKE ?");
+                params.add("%" + nameLike.trim() + "%");
+            }
+
+            sql.append(" ORDER BY r.[from] DESC, r.[rid] DESC");
+
+            PreparedStatement stm = connection.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof java.sql.Date) {
+                    stm.setDate(i + 1, (java.sql.Date) p);
+                } else {
+                    stm.setObject(i + 1, p);
+                }
+            }
+
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                RequestForLeave rfl = new RequestForLeave();
+                rfl.setId(rs.getInt("rid"));
+                rfl.setCreated_time(rs.getTimestamp("created_time"));
+                rfl.setFrom(rs.getDate("from"));
+                rfl.setTo(rs.getDate("to"));
+                rfl.setReason(rs.getString("reason"));
+                rfl.setStatus(rs.getInt("status"));
+
+                Employee created_by = new Employee();
+                created_by.setId(rs.getInt("created_by"));
+                created_by.setName(rs.getString("created_name"));
+                rfl.setCreated_by(created_by);
+
+                int processed_by_id = rs.getInt("processed_by");
+                if (!rs.wasNull() && processed_by_id != 0) {
+                    Employee processed_by = new Employee();
+                    processed_by.setId(processed_by_id);
+                    processed_by.setName(rs.getString("processed_name"));
+                    rfl.setProcessed_by(processed_by);
+                }
+
+                rfls.add(rfl);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return rfls;
     }
 
     @Override

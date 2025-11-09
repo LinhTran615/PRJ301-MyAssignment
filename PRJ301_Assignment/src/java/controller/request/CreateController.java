@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Date;
+import java.time.LocalDate;
+import model.Employee;
 import model.RequestForLeave;
 import model.iam.User;
 
@@ -17,7 +19,12 @@ public class CreateController extends BaseRequiredAuthorizationController {
     @Override
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        // show form
+        LocalDate today = LocalDate.now();
+        // giá trị mặc định
+        req.setAttribute("todayStr", today.toString());
+        req.setAttribute("fromVal", "");
+        req.setAttribute("toVal", "");
+        req.setAttribute("reasonVal", "");
         req.setAttribute("pageTitle", "Tạo đơn nghỉ phép");
         req.setAttribute("content", "/view/request/create_content.jsp");
         req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
@@ -26,30 +33,68 @@ public class CreateController extends BaseRequiredAuthorizationController {
     @Override
     protected void processPost(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
-        // handle submit
-        String reason = req.getParameter("reason");
-        String fromStr = req.getParameter("from");
-        String toStr = req.getParameter("to");
 
-        // NOTE: employee id (không phải user id)
-        int createdByEid = user.getEmployee().getId();
+        String reason  = trimOrNull(req.getParameter("reason"));
+        String fromStr = trimOrNull(req.getParameter("from"));
+        String toStr   = trimOrNull(req.getParameter("to"));
 
+        LocalDate today = LocalDate.now();
+        LocalDate from = null, to = null;
+        boolean ok = true;
+
+        // giữ lại giá trị để render lại khi lỗi
+        req.setAttribute("todayStr", today.toString());
+        req.setAttribute("fromVal", fromStr != null ? fromStr : "");
+        req.setAttribute("toVal", toStr != null ? toStr : "");
+        req.setAttribute("reasonVal", reason != null ? reason : "");
+
+        // parse
+        try { from = LocalDate.parse(fromStr); }
+        catch (Exception e) { ok = false; req.setAttribute("err_from", "Vui lòng chọn ngày bắt đầu hợp lệ."); }
+        try { to = LocalDate.parse(toStr); }
+        catch (Exception e) { ok = false; req.setAttribute("err_to", "Vui lòng chọn ngày kết thúc hợp lệ."); }
+
+        // validate nghiệp vụ
+        if (ok) {
+            if (from.isBefore(today)) {
+                ok = false; req.setAttribute("err_from", "Không được chọn ngày trong quá khứ.");
+            }
+            if (to.isBefore(from)) {
+                ok = false; req.setAttribute("err_to", "Ngày kết thúc phải ≥ ngày bắt đầu.");
+            }
+        }
+
+        if (reason == null || reason.isEmpty()) {
+            ok = false; req.setAttribute("err_reason", "Vui lòng nhập lý do.");
+        } else if (reason.length() > 500) {
+            ok = false; req.setAttribute("err_reason", "Lý do quá dài (tối đa 500 ký tự).");
+        }
+
+        if (!ok) {
+            req.setAttribute("pageTitle", "Tạo đơn nghỉ phép");
+            req.setAttribute("content", "/view/request/create_content.jsp");
+            req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
+            return;
+        }
+
+        // Lưu DB
         RequestForLeave r = new RequestForLeave();
-        r.setReason(reason);
-        r.setFrom(Date.valueOf(fromStr));
-        r.setTo(Date.valueOf(toStr));
-        r.setStatus(0); // processing
-        // set created_by id thôi (DAL lấy từ id)
-        r.getCreated_by(); // may be null
-        // dùng model nhẹ: set employee id vào created_by
-        model.Employee e = new model.Employee();
-        e.setId(createdByEid);
+        Employee e = new Employee();
+        e.setId(user.getEmployee().getId());
         r.setCreated_by(e);
+        r.setFrom(Date.valueOf(from));
+        r.setTo(Date.valueOf(to));
+        r.setReason(reason);
+        r.setStatus(0); // Processing
 
-        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        db.insert(r);
+        new RequestForLeaveDBContext().insert(r);
 
-        // quay về list
         resp.sendRedirect(req.getContextPath() + "/request/list");
+    }
+
+    private static String trimOrNull(String s){
+        if (s == null) return null;
+        s = s.trim();
+        return s.isEmpty() ? null : s;
     }
 }

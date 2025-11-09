@@ -17,7 +17,7 @@ public class ListController extends BaseRequiredAuthorizationController {
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
         RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        ArrayList<RequestForLeave> list = db.getByEmployeeAndSubodiaries(user.getId());
+        ArrayList<RequestForLeave> list = db.getByEmployeeAndSubodiaries(user.getEmployee().getId());
         req.setAttribute("rfls", list);
         req.setAttribute("pageTitle", "Request List");
         req.setAttribute("content", "/view/request/list_content.jsp");

@@ -7,6 +7,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.sql.SQLException;
 import model.RequestForLeave;
 import model.iam.User;
 
@@ -39,6 +40,8 @@ public class ReviewController extends BaseRequiredAuthorizationController {
             throws ServletException, IOException {
         String ridRaw = req.getParameter("rid");
         String action = req.getParameter("action"); // approve | reject
+        String rejectReason = req.getParameter("rejectReason");
+
         if (ridRaw == null || action == null) {
             resp.sendRedirect(req.getContextPath() + "/request/list");
             return;
@@ -47,9 +50,20 @@ public class ReviewController extends BaseRequiredAuthorizationController {
         int processedByEid = user.getEmployee().getId();
         int newStatus = "approve".equalsIgnoreCase(action) ? 1 : 2;
 
-        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        db.updateStatus(rid, newStatus, processedByEid);
+        // Nếu từ chối thì bắt buộc lý do
+        if (newStatus == 2 && (rejectReason == null || rejectReason.trim().isEmpty())) {
+            RequestForLeaveDBContext db = new RequestForLeaveDBContext();
+            RequestForLeave r = db.get(rid);
+            req.setAttribute("r", r);
+            req.setAttribute("errorRejectReason", "Vui lòng nhập lý do từ chối.");
+            req.setAttribute("pageTitle", "Duyệt đơn #" + rid);
+            req.setAttribute("content", "/view/request/review_content.jsp");
+            req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
+            return;
+        }
 
+        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
+        db.updateStatus(rid, newStatus, processedByEid, newStatus == 2 ? rejectReason.trim() : null);
         resp.sendRedirect(req.getContextPath() + "/request/list");
     }
 }
