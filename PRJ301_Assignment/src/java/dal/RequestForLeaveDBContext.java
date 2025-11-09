@@ -510,6 +510,29 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return false;
     }
 
+    public boolean isSubordinate(int managerEmpId, int employeeId) {
+        String sql = """
+        SELECT 1
+        FROM Employee e
+        WHERE e.eid = ? AND e.supervisorid = ?
+    """;
+        try {
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setInt(1, employeeId);
+            stm.setInt(2, managerEmpId);
+            ResultSet rs = stm.executeQuery();
+            boolean ok = rs.next();
+            rs.close();
+            stm.close();
+            return ok;
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        } finally {
+            closeConnection();
+        }
+    }
+
     @Override
     public ArrayList<RequestForLeave> list() {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody

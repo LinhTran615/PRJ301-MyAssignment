@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <c:set var="canEditRequest" value="false" />
 <c:forEach var="role" items="${sessionScope.auth.roles}">
     <c:forEach var="f" items="${role.features}">
@@ -7,6 +8,13 @@
             <c:set var="canEditRequest" value="true" />
         </c:if>
     </c:forEach>
+</c:forEach>
+<c:set var="isHead" value="false" />
+<c:forEach var="role" items="${sessionScope.auth.roles}">
+    <c:set var="nm" value="${fn:toLowerCase(fn:trim(role.name))}" />
+    <c:if test="${nm == 'head' || fn:endsWith(nm, ' head')}">
+        <c:set var="isHead" value="true" />
+    </c:if>
 </c:forEach>
 
 
@@ -87,8 +95,11 @@
                     <td><c:out value="${r.processed_by != null ? r.processed_by.name : ''}"/></td>
 
                     <td>
-                        <a href="${pageContext.request.contextPath}/request/review?rid=${r.id}"
-                           class="btn btn-sm btn-outline-primary">Review</a>
+                        <!-- Chỉ hiện Review nếu là Head hoặc không phải đơn của chính mình -->
+                        <c:if test="${isHead || r.created_by.id != sessionScope.auth.employee.id}">
+                            <a href="${pageContext.request.contextPath}/request/review?rid=${r.id}"
+                               class="btn btn-sm btn-outline-primary">Review</a>
+                        </c:if>
 
                         <c:if test="${canEditRequest 
                                       and r.status == 2 
