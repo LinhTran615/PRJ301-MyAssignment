@@ -69,6 +69,106 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
         return rfls;
     }
 
+    public ArrayList<RequestForLeave> listForManagerWithFilters(
+            int managerEid,
+            String nameLike, // nullable
+            java.sql.Date from, // nullable
+            java.sql.Date to, // nullable
+            Integer status // nullable: 0/1/2; null = tất cả
+    ) {
+        ArrayList<RequestForLeave> rfls = new ArrayList<>();
+        try {
+            // last_action_time = MAX(history.acted_time) nếu có, ngược lại = r.created_time
+            StringBuilder sql = new StringBuilder("""
+            WITH Org AS (
+                SELECT *, 0 AS lvl FROM Employee e WHERE e.eid = ?
+                UNION ALL
+                SELECT c.*, o.lvl + 1 AS lvl FROM Employee c JOIN Org o ON c.supervisorid = o.eid
+            ),
+            H AS (
+                SELECT rid, MAX(acted_time) AS last_hist
+                FROM RequestForLeaveHistory
+                GROUP BY rid
+            )
+            SELECT r.rid, r.created_by, e.ename AS created_name, r.created_time,
+                   r.[from], r.[to], r.reason, r.[status],
+                   r.processed_by, p.ename AS processed_name, r.reject_reason,
+                   COALESCE(h.last_hist, r.created_time) AS last_action_time
+            FROM Org e
+            JOIN RequestForLeave r ON r.created_by = e.eid
+            LEFT JOIN Employee p ON p.eid = r.processed_by
+            LEFT JOIN H h ON h.rid = r.rid
+            WHERE 1=1
+        """);
+
+            ArrayList<Object> params = new ArrayList<>();
+            params.add(managerEid);
+
+            if (nameLike != null && !nameLike.trim().isEmpty()) {
+                sql.append(" AND e.ename LIKE ? ");
+                params.add("%" + nameLike.trim() + "%");
+            }
+            if (from != null) {
+                sql.append(" AND r.[to] >= ? ");
+                params.add(from);
+            }
+            if (to != null) {
+                sql.append(" AND r.[from] <= ? ");
+                params.add(to);
+            }
+            if (status != null) {
+                sql.append(" AND r.[status] = ? ");
+                params.add(status);
+            }
+
+            sql.append(" ORDER BY COALESCE(h.last_hist, r.created_time) DESC, r.rid DESC ");
+
+            PreparedStatement stm = connection.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof java.sql.Date) {
+                    stm.setDate(i + 1, (java.sql.Date) p);
+                } else {
+                    stm.setObject(i + 1, p);
+                }
+            }
+
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                RequestForLeave r = new RequestForLeave();
+                r.setId(rs.getInt("rid"));
+                r.setCreated_time(rs.getTimestamp("created_time"));
+                r.setFrom(rs.getDate("from"));
+                r.setTo(rs.getDate("to"));
+                r.setReason(rs.getString("reason"));
+                r.setStatus(rs.getInt("status"));
+                r.setReject_reason(rs.getString("reject_reason"));
+
+                Employee created = new Employee();
+                created.setId(rs.getInt("created_by"));
+                created.setName(rs.getString("created_name"));
+                r.setCreated_by(created);
+
+                int processedId = rs.getInt("processed_by");
+                if (!rs.wasNull() && processedId != 0) {
+                    Employee pb = new Employee();
+                    pb.setId(processedId);
+                    pb.setName(rs.getString("processed_name"));
+                    r.setProcessed_by(pb);
+                }
+
+                // Bạn có thể muốn lưu last_action_time vào BaseModel nếu có field; nếu không, bỏ qua.
+                rfls.add(r);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return rfls;
+    }
+
+    @Override
     public RequestForLeave get(int rid) {
         try {
             String sql = """
@@ -361,6 +461,31 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             closeConnection();
         }
         return rfls;
+    }
+
+    // --- NEW: cho phép người tạo đơn chỉnh sửa lý do & gửi lại sau khi bị từ chối ---
+    public boolean resubmitByOwner(int rid, int ownerEid, String newReason) {
+        try {
+            String sql = """
+                UPDATE RequestForLeave
+                   SET reason = ?,
+                       status = 0,          -- back to Processing
+                       processed_by = NULL, -- clear reviewer
+                       reject_reason = NULL -- clear reject note
+                 WHERE rid = ? AND created_by = ?
+            """;
+            PreparedStatement stm = connection.prepareStatement(sql);
+            stm.setString(1, newReason);
+            stm.setInt(2, rid);
+            stm.setInt(3, ownerEid);
+            int rows = stm.executeUpdate();
+            return rows > 0;
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        } finally {
+            closeConnection();
+        }
     }
 
     @Override
