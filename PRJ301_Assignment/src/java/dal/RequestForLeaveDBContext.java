@@ -532,6 +532,60 @@ public class RequestForLeaveDBContext extends DBContext<RequestForLeave> {
             closeConnection();
         }
     }
+    // Lấy toàn bộ nhân viên dưới quyền (mọi cấp) của managerEid; có thể lọc theo tên
+
+    public ArrayList<Employee> listEmployeesUnder(int managerEid, String nameLike) {
+        ArrayList<Employee> res = new ArrayList<>();
+        try {
+            StringBuilder sql = new StringBuilder("""
+            WITH Org AS (
+                SELECT *, 0 AS lvl FROM Employee e WHERE e.eid = ?
+                UNION ALL
+                SELECT c.*, o.lvl + 1 AS lvl
+                FROM Employee c JOIN Org o ON c.supervisorid = o.eid
+            )
+            SELECT e.eid, e.ename
+            FROM Org e
+            WHERE e.eid <> ?
+        """);
+
+            ArrayList<Object> params = new ArrayList<>();
+            params.add(managerEid);
+            params.add(managerEid);
+
+            if (nameLike != null && !nameLike.trim().isEmpty()) {
+                sql.append(" AND e.ename LIKE ? ");
+                params.add("%" + nameLike.trim() + "%");
+            }
+
+            sql.append(" ORDER BY e.ename ASC ");
+
+            PreparedStatement stm = connection.prepareStatement(sql.toString());
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof java.sql.Date) {
+                    stm.setDate(i + 1, (java.sql.Date) p);
+                } else {
+                    stm.setObject(i + 1, p);
+                }
+            }
+
+            ResultSet rs = stm.executeQuery();
+            while (rs.next()) {
+                Employee e = new Employee();
+                e.setId(rs.getInt("eid"));
+                e.setName(rs.getString("ename"));
+                res.add(e);
+            }
+            rs.close();
+            stm.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(RequestForLeaveDBContext.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            closeConnection();
+        }
+        return res;
+    }
 
     @Override
     public ArrayList<RequestForLeave> list() {

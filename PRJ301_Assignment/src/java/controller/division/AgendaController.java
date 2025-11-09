@@ -6,132 +6,126 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.Date;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Map;
+import model.Employee;
 import model.RequestForLeave;
+import model.iam.Role;
 import model.iam.User;
 
 @WebServlet(urlPatterns = "/division/agenda")
 public class AgendaController extends BaseRequiredAuthorizationController {
 
-    private static final SimpleDateFormat ISO = new SimpleDateFormat("yyyy-MM-dd");
-
-    private Date parseDate(String v) {
-        if (v == null || v.isBlank()) {
-            return null;
+    private boolean isAllowedHead(User user) {
+        if (user == null || user.getRoles() == null) {
+            return false;
         }
-        try {
-            return Date.valueOf(v);
-        } catch (Exception e) {
-            try {
-                return new Date(ISO.parse(v).getTime());
-            } catch (ParseException ex) {
-                return null;
+        for (Role r : user.getRoles()) {
+            if (r == null || r.getName() == null) {
+                continue;
+            }
+            String nm = r.getName().trim().toLowerCase(); // "it head", "qa head", "sale head"
+            if (nm.equals("it head") || nm.equals("qa head") || nm.equals("sale head")) {
+                return true;
             }
         }
+        return false;
     }
 
     @Override
     protected void processGet(HttpServletRequest req, HttpServletResponse resp, User user)
             throws ServletException, IOException {
 
-        // Lấy filter
-        String name = req.getParameter("name");
-        Date from = parseDate(req.getParameter("from"));
-        Date to = parseDate(req.getParameter("to"));
-        String format = req.getParameter("format");
-
-        int managerEmpId = user.getEmployee().getId(); // FIX: dùng employee id
-
-        RequestForLeaveDBContext db = new RequestForLeaveDBContext();
-        ArrayList<RequestForLeave> list = db.getAgendaForManager(managerEmpId, from, to, name);
-
-        if ("json".equalsIgnoreCase(format)) {
-            resp.setContentType("application/json;charset=UTF-8");
-            StringBuilder sb = new StringBuilder();
-            sb.append('[');
-            for (int i = 0; i < list.size(); i++) {
-                RequestForLeave r = list.get(i);
-                String title = (r.getCreated_by() != null ? r.getCreated_by().getName() : ("#" + r.getId()));
-                title += " (" + (r.getStatus() == 1 ? "Approved" : r.getStatus() == 2 ? "Rejected" : "Processing") + ")";
-
-                java.util.Date endPlus = new java.util.Date(r.getTo().getTime() + 24L * 3600L * 1000L);
-                String start = ISO.format(r.getFrom());
-                String end = ISO.format(endPlus);
-                String color = (r.getStatus() == 1) ? "#10b981" : (r.getStatus() == 2) ? "#ef4444" : "#f59e0b";
-                String url = req.getContextPath() + "/request/review?rid=" + r.getId();
-
-                sb.append('{')
-                        .append("\"id\":").append(r.getId()).append(',')
-                        .append("\"title\":\"").append(jsonEscape(title)).append("\",")
-                        .append("\"start\":\"").append(start).append("\",")
-                        .append("\"end\":\"").append(end).append("\",")
-                        .append("\"url\":\"").append(jsonEscape(url)).append("\",")
-                        .append("\"color\":\"").append(color).append("\"")
-                        .append('}');
-                if (i < list.size() - 1) {
-                    sb.append(',');
-                }
-            }
-            sb.append(']');
-
-            try (PrintWriter out = resp.getWriter()) {
-                out.print(sb.toString());
-            }
+        // 0) Quyền
+        if (!isAllowedHead(user)) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN,
+                    "Chỉ IT Head / QA Head / SALE Head được xem Agenda.");
             return;
         }
 
-        // render JSP
-        req.setAttribute("requests", list);
+        // 1) Filter: month (yyyy-MM) + name
+        String monthStr = req.getParameter("month");   // ví dụ "2025-10"
+        String nameLike = req.getParameter("name");
+        YearMonth ym;
+        try {
+            ym = (monthStr == null || monthStr.isBlank())
+                    ? YearMonth.now()
+                    : YearMonth.parse(monthStr);
+        } catch (Exception ignore) {
+            ym = YearMonth.now();
+        }
+
+        LocalDate d1 = ym.atDay(1);
+        LocalDate d2 = ym.atEndOfMonth();
+        Date from = Date.valueOf(d1);
+        Date to = Date.valueOf(d2);
+
+        // 2) Danh sách ngày trong tháng
+        List<Date> days = new ArrayList<>();
+        for (LocalDate d = d1; !d.isAfter(d2); d = d.plusDays(1)) {
+            days.add(Date.valueOf(d));
+        }
+
+        int managerEid = user.getEmployee().getId();
+
+        // 3) Lấy toàn bộ nhân viên dưới quyền (kể cả không có đơn)
+        RequestForLeaveDBContext empDb = new RequestForLeaveDBContext();
+        List<Employee> emps = empDb.listEmployeesUnder(managerEid, nameLike);
+
+        // 4) Lấy các đơn trong tháng (chỉ subordinates)
+        RequestForLeaveDBContext rdb = new RequestForLeaveDBContext();
+        List<RequestForLeave> rfls = rdb.getAgendaForManager(managerEid, from, to, nameLike);
+
+        // 5) Dàn bảng: mỗi nhân viên 1 row -> cells default 0 (Working)
+        // Dùng Map<String,Object> để JSP đọc được qua EL
+        List<Map<String, Object>> rows = new ArrayList<>();
+        Map<Integer, Integer> indexByEmpId = new LinkedHashMap<>();
+
+        for (int i = 0; i < emps.size(); i++) {
+            Employee e = emps.get(i);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("emp", e);
+            List<Integer> cells = new ArrayList<>();
+            for (int k = 0; k < days.size(); k++) {
+                cells.add(0); // 0 = Working
+            }
+            row.put("cells", cells);
+            rows.add(row);
+            indexByEmpId.put(e.getId(), i);
+        }
+
+        // 6) Tô màu theo đơn: 1 = OFF (Approved). (Nếu muốn Processing = 2, mở comment)
+        for (RequestForLeave r : rfls) {
+            Integer idx = indexByEmpId.get(r.getCreated_by().getId());
+            if (idx == null) {
+                continue; // bảo vệ
+            }
+            @SuppressWarnings("unchecked")
+            List<Integer> cells = (List<Integer>) rows.get(idx).get("cells");
+            for (int i = 0; i < days.size(); i++) {
+                Date d = days.get(i);
+                if (!d.before(r.getFrom()) && !d.after(r.getTo())) {
+                    if (r.getStatus() == 1) {
+                        cells.set(i, 1); // OFF
+                    }
+                    // else if (r.getStatus() == 0) { cells.set(i, 2); } // PROCESSING
+                }
+            }
+        }
+
+        // 7) Đẩy ra view
+        req.setAttribute("month", ym.toString());
+        req.setAttribute("name", nameLike == null ? "" : nameLike);
+        req.setAttribute("days", days);
+        req.setAttribute("rows", rows);
         req.setAttribute("pageTitle", "Agenda phòng ban");
         req.setAttribute("content", "/view/division/agenda_content.jsp");
         req.getRequestDispatcher("/view/layout/layout.jsp").forward(req, resp);
-    }
-
-    private static String jsonEscape(String s) {
-        if (s == null) {
-            return "";
-        }
-        StringBuilder r = new StringBuilder(s.length() + 16);
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            switch (c) {
-                case '"':
-                    r.append("\\\"");
-                    break;
-                case '\\':
-                    r.append("\\\\");
-                    break;
-                case '\b':
-                    r.append("\\b");
-                    break;
-                case '\f':
-                    r.append("\\f");
-                    break;
-                case '\n':
-                    r.append("\\n");
-                    break;
-                case '\r':
-                    r.append("\\r");
-                    break;
-                case '\t':
-                    r.append("\\t");
-                    break;
-                default:
-                    if (c < 0x20) {
-                        r.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        r.append(c);
-                    }
-            }
-        }
-        return r.toString();
     }
 
     @Override
