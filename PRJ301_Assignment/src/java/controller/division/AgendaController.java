@@ -117,7 +117,18 @@ public class AgendaController extends BaseRequiredAuthorizationController {
                 }
             }
         }
-
+        /* ====== NEW: tính tổng số ngày nghỉ đã Approved cho từng nhân sự ====== */
+        for (Map<String, Object> row : rows) {
+            @SuppressWarnings("unchecked")
+            List<Integer> cells = (List<Integer>) row.get("cells");
+            int total = 0;
+            for (Integer v : cells) {
+                if (v != null && v == 1) {
+                    total++;   // chỉ đếm OFF (Approved)
+                }
+            }
+            row.put("total", total);                 // <-- để JSP đọc ${row.total}
+        }
         // 7) Đẩy ra view
         req.setAttribute("month", ym.toString());
         req.setAttribute("name", nameLike == null ? "" : nameLike);
